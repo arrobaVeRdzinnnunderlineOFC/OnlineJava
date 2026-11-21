@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Java — Virtual Java IDE</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ide-app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-dot"></span>
+        <h1>ONLINE JAVA <span class="badge">VIRTUAL • ZERO-INSTALL</span></h1>
+      </div>
+
+      <div class="top-actions">
+        <label class="main-class-box">
+          Main Class:
+          <input id="mainClassInput" type="text" value="Main" />
+        </label>
+        <button id="runBtn" class="btn run-btn">▶ Correr</button>
+        <button id="clearConsoleBtn" class="btn">Limpar Consola</button>
+        <button id="exportJarBtn" class="btn accent-btn">Exportar .JAR</button>
+        <button id="exportExeBtn" class="btn accent-btn">Gerar Executável</button>
+        <button id="resetVfsBtn" class="btn danger-btn">Reset Projeto</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="explorer">
+        <div class="panel-header">
+          <span>PROJETO VIRTUAL (SEM DISCO)</span>
+          <button id="newFileBtn" class="btn small-btn">+ Ficheiro</button>
+        </div>
+        <div id="fileTree" class="file-list"></div>
+        <div class="vfs-note">
+          Ficheiros guardados apenas no ambiente virtual do Online Java (não lê nem escreve nos ficheiros do teu PC).
+        </div>
+      </aside>
+
+      <main class="editor-area">
+        <div class="editor-tabs">
+          <span id="activeFileLabel" class="active-tab">src/Main.java</span>
+          <span class="hint-text">Suporta package, import entre ficheiros virtuais, classes, métodos, loops e System.out.println</span>
+        </div>
+
+        <div class="code-container">
+          <div id="lineNumbers" class="line-numbers">1</div>
+          <textarea id="codeEditor" spellcheck="false" aria-label="Editor de código Java"></textarea>
+        </div>
+
+        <section class="console-panel">
+          <div class="panel-header">
+            <span>CONSOLA / SAÍDA JAVA</span>
+            <span id="statusLabel" class="status-ok">Pronto (sem instalação necessária)</span>
+          </div>
+          <pre id="consoleOutput" class="console-out"></pre>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/zip.js"></script>
+  <script src="js/vfs.js"></script>
+  <script src="js/java-runner.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

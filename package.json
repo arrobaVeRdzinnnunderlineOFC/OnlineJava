@@ -1,0 +1,12 @@
+{
+  "name": "online-java",
+  "version": "1.0.0",
+  "description": "Online Java - IDE de Java virtual zero-install em JavaScript com exportação .JAR e executável",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
