@@ -31,6 +31,32 @@ function splitArgs(argStr) {
   return args;
 }
 
+function stripOuterParens(expr) {
+  let s = expr.trim();
+  while (s.startsWith("(") && s.endsWith(")")) {
+    let depth = 0;
+    let inStr = false;
+    let wrapsWhole = true;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '"' && s[i - 1] !== "\\") inStr = !inStr;
+      else if (!inStr) {
+        if (ch === "(") depth++;
+        else if (ch === ")") {
+          depth--;
+          if (depth === 0 && i < s.length - 1) {
+            wrapsWhole = false;
+            break;
+          }
+        }
+      }
+    }
+    if (!wrapsWhole || depth !== 0) break;
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 class VirtualJavaRunner {
   constructor(filesMap, visualCtx = null) {
     this.filesMap = filesMap;
@@ -311,7 +337,7 @@ class VirtualJavaRunner {
   }
 
   evalExpr(expr, scope, instance) {
-    const e = expr.trim();
+    let e = stripOuterParens(expr.trim());
     if (!e) return undefined;
 
     if (e.startsWith('"') && e.endsWith('"') && e.length >= 2) {
@@ -343,7 +369,7 @@ class VirtualJavaRunner {
     if (plusParts.length > 1) {
       const vals = plusParts.map((p) => this.evalExpr(p, scope, instance));
       if (vals.some((v) => typeof v === "string")) {
-        return vals.map((v) => String(v)).join("");
+        return vals.map((v) => (v === null || v === undefined ? "" : String(v))).join("");
       }
       return vals.reduce((acc, v) => acc + Number(v), 0);
     }
@@ -363,6 +389,11 @@ class VirtualJavaRunner {
         if (op === "*") return Number(left) * Number(right);
         if (op === "/") return Number(left) / Number(right);
       }
+    }
+
+    if (e.startsWith("-") && e.length > 1) {
+      const inner = this.evalExpr(e.slice(1), scope, instance);
+      return -Number(inner);
     }
 
     const callMatch = e.match(/^([A-Za-z0-9_$.]+)\.([A-Za-z0-9_]+)\((.*)\)$/);
@@ -387,21 +418,23 @@ class VirtualJavaRunner {
 
     if (e.startsWith("this.") && instance) {
       const fname = e.slice(5).trim();
-      return instance.fields[fname];
+      const val = instance.fields[fname];
+      return val === undefined ? 0 : val;
     }
 
     const dotFieldMatch = e.match(/^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)$/);
     if (dotFieldMatch) {
       const obj = this.evalExpr(dotFieldMatch[1], scope, instance);
       if (obj && obj.fields && dotFieldMatch[2] in obj.fields) {
-        return obj.fields[dotFieldMatch[2]];
+        const val = obj.fields[dotFieldMatch[2]];
+        return val === undefined ? 0 : val;
       }
     }
 
     if (e in scope) return scope[e];
     if (instance && e in instance.fields) return instance.fields[e];
 
-    return e;
+    return 0;
   }
 
   splitTopLevelPlus(expr) {
