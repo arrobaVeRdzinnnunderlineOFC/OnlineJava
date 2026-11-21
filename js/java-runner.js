@@ -48,7 +48,7 @@ class VirtualJavaRunner {
     for (const [filePath, rawCode] of Object.entries(this.filesMap)) {
       const code = rawCode
         .replace(/\/\*[\s\S]*?\*\//g, "")
-        .replace(/\/\/.*$/gm, "");
+        .replace(/\/\/[^\r\n]*/g, "");
 
       const pkgMatch = code.match(/^\s*package\s+([a-zA-Z0-9_.]+)\s*;/m);
       const pkg = pkgMatch ? pkgMatch[1] : "";
@@ -84,7 +84,7 @@ class VirtualJavaRunner {
         }
       }
       const classBody = endIdx >= 0 ? bodyWithRest.slice(0, endIdx) : bodyWithRest;
-      const fqcn = pkg ? `${pkg}.${className}` : className;
+      const fqcn = pkg ? pkg + "." + className : className;
 
       const parsed = this.parseClassMembers(className, fqcn, pkg, imports, classBody, filePath);
       this.classes.set(fqcn, parsed);
@@ -176,17 +176,17 @@ class VirtualJavaRunner {
   resolveClass(name, fromClassDef) {
     if (this.classes.has(name)) return this.classes.get(name);
     if (fromClassDef) {
-      if (fromClassDef.pkg && this.classes.has(`${fromClassDef.pkg}.${name}`)) {
-        return this.classes.get(`${fromClassDef.pkg}.${name}`);
+      if (fromClassDef.pkg && this.classes.has(fromClassDef.pkg + "." + name)) {
+        return this.classes.get(fromClassDef.pkg + "." + name);
       }
       for (const imp of fromClassDef.imports) {
-        if (imp === name || imp.endsWith(`.${name}`)) {
+        if (imp === name || imp.endsWith("." + name)) {
           if (this.classes.has(imp)) return this.classes.get(imp);
         }
         if (imp.endsWith(".*")) {
           const basePkg = imp.slice(0, -2);
-          if (this.classes.has(`${basePkg}.${name}`)) {
-            return this.classes.get(`${basePkg}.${name}`);
+          if (this.classes.has(basePkg + "." + name)) {
+            return this.classes.get(basePkg + "." + name);
           }
         }
       }
@@ -238,10 +238,10 @@ class VirtualJavaRunner {
 
     const method = classDef.methods.find((m) => m.name === methodName);
     if (!method) {
-      throw new JavaExecutionError(`Método '${methodName}' não encontrado em '${classDef.className}'.`);
+      throw new JavaExecutionError("Metodo '" + methodName + "' nao encontrado em '" + classDef.className + "'.");
     }
 
-    const localScope = { ...callerScope };
+    const localScope = Object.assign({}, callerScope);
     method.params.forEach((pName, idx) => {
       localScope[pName] = args[idx];
     });
@@ -255,8 +255,7 @@ class VirtualJavaRunner {
     if (!e) return undefined;
 
     if (e.startsWith('"') && e.endsWith('"') && e.length >= 2) {
-      return e.slice(1, -1).replace(/\n/g, "
-").replace(/\"/g, '"');
+      return e.slice(1, -1).replace(/\\n/g, "\n").replace(/\\"/g, '"');
     }
 
     if (e === "true") return true;
@@ -275,7 +274,7 @@ class VirtualJavaRunner {
       const argVals = splitArgs(newMatch[2]).map((a) => this.evalExpr(a, scope, instance));
       const cDef = this.resolveClass(targetName, instance ? instance.__classDef : null);
       if (!cDef) {
-        throw new JavaExecutionError(`Classe '${targetName}' não encontrada. Verifica imports ou ficheiros.`);
+        throw new JavaExecutionError("Classe '" + targetName + "' nao encontrada. Verifica imports ou ficheiros.");
       }
       return this.createInstance(cDef, argVals, scope);
     }
@@ -401,11 +400,14 @@ class VirtualJavaRunner {
 
       const forMatch = s.match(/^for\s*\(([^;]*);([^;]*);([^)]*)\)\s*\{([\s\S]*)\}$/);
       if (forMatch) {
-        const [, initPart, condPart, stepPart, loopBody] = forMatch;
+        const initPart = forMatch[1];
+        const condPart = forMatch[2];
+        const stepPart = forMatch[3];
+        const loopBody = forMatch[4];
         if (initPart.trim()) this.execSimpleStmt(initPart.trim(), scope, instance);
         let guard = 0;
         while (condPart.trim() ? Boolean(this.evalExpr(condPart.trim(), scope, instance)) : true) {
-          if (++guard > 5000) throw new JavaExecutionError("Limite de iterações (5000) atingido no loop for.");
+          if (++guard > 5000) throw new JavaExecutionError("Limite de iteracoes (5000) atingido no loop for.");
           const res = this.execBlock(loopBody, scope, instance);
           if (res && res.__returned) return res;
           if (stepPart.trim()) this.execSimpleStmt(stepPart.trim(), scope, instance);
@@ -415,10 +417,11 @@ class VirtualJavaRunner {
 
       const whileMatch = s.match(/^while\s*\(([^)]*)\)\s*\{([\s\S]*)\}$/);
       if (whileMatch) {
-        const [, condPart, loopBody] = whileMatch;
+        const condPart = whileMatch[1];
+        const loopBody = whileMatch[2];
         let guard = 0;
         while (Boolean(this.evalExpr(condPart.trim(), scope, instance))) {
-          if (++guard > 5000) throw new JavaExecutionError("Limite de iterações (5000) atingido no loop while.");
+          if (++guard > 5000) throw new JavaExecutionError("Limite de iteracoes (5000) atingido no loop while.");
           const res = this.execBlock(loopBody, scope, instance);
           if (res && res.__returned) return res;
         }
@@ -427,7 +430,9 @@ class VirtualJavaRunner {
 
       const ifMatch = s.match(/^if\s*\(([^)]*)\)\s*\{([\s\S]*)\}(?:\s*else\s*\{([\s\S]*)\})?$/);
       if (ifMatch) {
-        const [, condPart, thenBody, elseBody] = ifMatch;
+        const condPart = ifMatch[1];
+        const thenBody = ifMatch[2];
+        const elseBody = ifMatch[3];
         if (Boolean(this.evalExpr(condPart.trim(), scope, instance))) {
           const res = this.execBlock(thenBody, scope, instance);
           if (res && res.__returned) return res;
@@ -456,13 +461,15 @@ class VirtualJavaRunner {
     const declMatch = s.match(/^(?:final\s+)?([A-Za-z0-9_<>\[\]]+)\s+([A-Za-z0-9_]+)\s*=\s*(.+)$/);
 
     if (declMatch) {
-      const [, , varName, rhs] = declMatch;
+      const varName = declMatch[2];
+      const rhs = declMatch[3];
       scope[varName] = this.evalExpr(rhs, scope, instance);
       return;
     }
 
     if (assignMatch) {
-      const [, target, rhs] = assignMatch;
+      const target = assignMatch[1];
+      const rhs = assignMatch[2];
       this.assignTarget(target, this.evalExpr(rhs, scope, instance), scope, instance);
       return;
     }
@@ -527,14 +534,16 @@ class VirtualJavaRunner {
     this.parseAllClasses();
     const mainDef = this.classes.get(mainClassName);
     if (!mainDef) {
-      throw new JavaExecutionError(`Classe principal '${mainClassName}' não encontrada no projeto virtual.`);
+      throw new JavaExecutionError("Classe principal '" + mainClassName + "' nao encontrada no projeto virtual.");
     }
     const mainMethod = mainDef.methods.find((m) => m.name === "main");
     if (!mainMethod) {
-      throw new JavaExecutionError(`Método 'public static void main(String[] args)' não encontrado em '${mainClassName}'.`);
+      throw new JavaExecutionError("Metodo 'public static void main(String[] args)' nao encontrado em '" + mainClassName + "'.");
     }
     const scope = { args: [] };
     this.execBlock(mainMethod.body, scope, null);
     return this.output;
   }
 }
+
+window.VirtualJavaRunner = VirtualJavaRunner;

@@ -34,10 +34,10 @@ function renderFileTree() {
   for (const path of paths) {
     const item = document.createElement("div");
     item.className = "file-item" + (path === vfs.activePath ? " active" : "");
+    item.addEventListener("click", () => selectFile(path));
 
     const nameSpan = document.createElement("span");
     nameSpan.textContent = path;
-    nameSpan.addEventListener("click", () => selectFile(path));
 
     item.appendChild(nameSpan);
 
@@ -45,7 +45,7 @@ function renderFileTree() {
       const delBtn = document.createElement("button");
       delBtn.className = "del-file-btn";
       delBtn.title = "Remover ficheiro virtual";
-      delBtn.textContent = "×";
+      delBtn.textContent = "x";
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (vfs.deleteFile(path)) {
@@ -67,8 +67,10 @@ function loadActiveFileIntoEditor() {
 }
 
 function selectFile(path) {
-  vfs.setContent(vfs.activePath, codeEditorEl.value);
-  vfs.activePath = path;
+  if (vfs.files[vfs.activePath] !== undefined) {
+    vfs.files[vfs.activePath] = codeEditorEl.value;
+  }
+  if (!vfs.setActivePath(path)) return;
   vfs.save();
   loadActiveFileIntoEditor();
   renderFileTree();
@@ -114,16 +116,19 @@ runBtn.addEventListener("click", () => {
   statusLabelEl.textContent = "A executar...";
 
   try {
-    const runner = new VirtualJavaRunner(vfs.files);
+    if (typeof window.VirtualJavaRunner !== "function") {
+      throw new Error("VirtualJavaRunner nao carregado. Verifica se js/java-runner.js existe e nao tem erros.");
+    }
+    const runner = new window.VirtualJavaRunner(vfs.files);
     const lines = runner.run(mainClass);
-    appendConsole(`--- Execução (${mainClass}.main) ---`);
+    appendConsole("--- Execucao (" + mainClass + ".main) ---");
     for (const l of lines) appendConsole(l);
     statusLabelEl.className = "status-ok";
-    statusLabelEl.textContent = `Concluído (${lines.length} linhas)`;
+    statusLabelEl.textContent = "Concluido (" + lines.length + " linhas)";
   } catch (err) {
-    appendConsole(`[ERRO JAVA] ${err.message}`);
+    appendConsole("[ERRO JAVA] " + err.message);
     statusLabelEl.className = "status-err";
-    statusLabelEl.textContent = "Erro de execução";
+    statusLabelEl.textContent = "Erro de execucao";
   }
 });
 
@@ -137,14 +142,14 @@ exportJarBtn.addEventListener("click", () => {
   vfs.setContent(vfs.activePath, codeEditorEl.value);
   const mainClass = mainClassInputEl.value.trim() || "Main";
   exportJarFile(vfs.files, mainClass);
-  appendConsole(`[EXPORT] Gerado ${mainClass}.jar com META-INF/MANIFEST.MF e ficheiros do projeto virtual.`);
+  appendConsole("[EXPORT] Gerado " + mainClass + ".jar com META-INF/MANIFEST.MF e ficheiros do projeto virtual.");
 });
 
 exportExeBtn.addEventListener("click", () => {
   vfs.setContent(vfs.activePath, codeEditorEl.value);
   const mainClass = mainClassInputEl.value.trim() || "Main";
   exportExecutableLauncher(vfs.files, mainClass);
-  appendConsole(`[EXPORT] Gerado executável ${mainClass}_Runner.bat para ${mainClass}.`);
+  appendConsole("[EXPORT] Gerado executavel " + mainClass + "_Runner.bat para " + mainClass + ".");
 });
 
 resetVfsBtn.addEventListener("click", () => {
@@ -157,4 +162,4 @@ resetVfsBtn.addEventListener("click", () => {
 
 renderFileTree();
 loadActiveFileIntoEditor();
-appendConsole("Online Java iniciado. Não é necessário instalar nada para correr ou dar import entre ficheiros virtuais.");
+appendConsole("Online Java iniciado. Nao e necessario instalar nada para correr ou dar import entre ficheiros virtuais.");

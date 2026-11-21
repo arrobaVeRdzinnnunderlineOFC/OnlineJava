@@ -1,4 +1,5 @@
 const VFS_STORAGE_KEY = "online_java_ide_vfs_v1";
+const VFS_ACTIVE_KEY = "online_java_ide_active_v1";
 
 const DEFAULT_VIRTUAL_FILES = {
   "src/Main.java": `import app.Criatura;
@@ -47,7 +48,7 @@ public class Criatura {
 class VirtualFileSystem {
   constructor() {
     this.files = this.load();
-    this.activePath = Object.keys(this.files)[0] || "src/Main.java";
+    this.activePath = this.loadActivePath();
   }
 
   load() {
@@ -60,18 +61,39 @@ class VirtualFileSystem {
         }
       }
     } catch (_) {}
-    return { ...DEFAULT_VIRTUAL_FILES };
+    return Object.assign({}, DEFAULT_VIRTUAL_FILES);
+  }
+
+  loadActivePath() {
+    const keys = Object.keys(this.files);
+    try {
+      const saved = localStorage.getItem(VFS_ACTIVE_KEY);
+      if (saved && this.files[saved] !== undefined) {
+        return saved;
+      }
+    } catch (_) {}
+    return keys[0] || "src/Main.java";
+  }
+
+  setActivePath(path) {
+    if (this.files[path] === undefined) return false;
+    this.activePath = path;
+    try {
+      localStorage.setItem(VFS_ACTIVE_KEY, path);
+    } catch (_) {}
+    return true;
   }
 
   save() {
     try {
       localStorage.setItem(VFS_STORAGE_KEY, JSON.stringify(this.files));
+      localStorage.setItem(VFS_ACTIVE_KEY, this.activePath);
     } catch (_) {}
   }
 
   reset() {
-    this.files = { ...DEFAULT_VIRTUAL_FILES };
-    this.activePath = "src/Main.java";
+    this.files = Object.assign({}, DEFAULT_VIRTUAL_FILES);
+    this.setActivePath("src/Main.java");
     this.save();
   }
 
@@ -83,18 +105,13 @@ class VirtualFileSystem {
   createFile(path) {
     const clean = path.trim().replace(/^\/+/, "");
     if (!clean) return null;
-    const normalized = clean.endsWith(".java") ? clean : `${clean}.java`;
+    const normalized = clean.endsWith(".java") ? clean : clean + ".java";
     if (!this.files[normalized]) {
       const className = normalized.split("/").pop().replace(".java", "");
-      this.files[normalized] = `public class ${className} {
-    public static void main(String[] args) {
-        System.out.println("Olá de ${className}!");
+      this.files[normalized] = "public class " + className + " {\n    public static void main(String[] args) {\n        System.out.println(\"Ola de " + className + "!\");\n    }\n}\n";
     }
-}
-`;
-      this.save();
-    }
-    this.activePath = normalized;
+    this.setActivePath(normalized);
+    this.save();
     return normalized;
   }
 
@@ -103,9 +120,11 @@ class VirtualFileSystem {
     if (keys.length <= 1) return false;
     delete this.files[path];
     if (this.activePath === path) {
-      this.activePath = Object.keys(this.files)[0];
+      this.setActivePath(Object.keys(this.files)[0]);
     }
     this.save();
     return true;
   }
 }
+
+window.VirtualFileSystem = VirtualFileSystem;
