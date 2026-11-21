@@ -32,14 +32,70 @@ function splitArgs(argStr) {
 }
 
 class VirtualJavaRunner {
-  constructor(filesMap) {
+  constructor(filesMap, visualCtx = null) {
     this.filesMap = filesMap;
+    this.visualCtx = visualCtx;
+    this.activeColor = "#39ff14";
     this.classes = new Map();
     this.output = [];
   }
 
   log(msg) {
     this.output.push(String(msg));
+  }
+
+  execTelaCommand(methodName, args) {
+    const ctx = this.visualCtx;
+    if (!ctx) return null;
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+
+    if (methodName === "limpar") {
+      ctx.fillStyle = args[0] ? String(args[0]) : "#070b08";
+      ctx.fillRect(0, 0, w, h);
+      return null;
+    }
+    if (methodName === "cor") {
+      this.activeColor = args[0] ? String(args[0]) : "#39ff14";
+      ctx.fillStyle = this.activeColor;
+      ctx.strokeStyle = this.activeColor;
+      return null;
+    }
+    if (methodName === "rect") {
+      const x = Number(args[0] || 0);
+      const y = Number(args[1] || 0);
+      const rw = Number(args[2] || 20);
+      const rh = Number(args[3] || 20);
+      ctx.fillStyle = this.activeColor;
+      ctx.fillRect(x, y, rw, rh);
+      return null;
+    }
+    if (methodName === "circulo") {
+      const cx = Number(args[0] || 0);
+      const cy = Number(args[1] || 0);
+      const r = Number(args[2] || 10);
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(1, r), 0, Math.PI * 2);
+      ctx.fillStyle = this.activeColor;
+      ctx.fill();
+      return null;
+    }
+    if (methodName === "linha") {
+      ctx.beginPath();
+      ctx.moveTo(Number(args[0] || 0), Number(args[1] || 0));
+      ctx.lineTo(Number(args[2] || 0), Number(args[3] || 0));
+      ctx.strokeStyle = this.activeColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      return null;
+    }
+    if (methodName === "texto") {
+      ctx.font = "13px Consolas, monospace";
+      ctx.fillStyle = this.activeColor;
+      ctx.fillText(String(args[0] !== undefined ? args[0] : ""), Number(args[1] || 10), Number(args[2] || 20));
+      return null;
+    }
+    throw new JavaExecutionError("Metodo visual 'Tela." + methodName + "' nao existe.");
   }
 
   parseAllClasses() {
@@ -220,6 +276,10 @@ class VirtualJavaRunner {
       return null;
     }
 
+    if (instance && instance.__isTela) {
+      return this.execTelaCommand(methodName, args);
+    }
+
     if (instance && Array.isArray(instance.__list)) {
       if (methodName === "add") {
         instance.__list.push(args[0]);
@@ -312,6 +372,9 @@ class VirtualJavaRunner {
       const argVals = splitArgs(callMatch[3]).map((a) => this.evalExpr(a, scope, instance));
       if (targetExpr === "System.out") {
         return this.callMethod(null, mName, argVals, { __isOut: true }, scope);
+      }
+      if (targetExpr === "Tela") {
+        return this.callMethod(null, mName, argVals, { __isTela: true }, scope);
       }
       const targetObj = this.evalExpr(targetExpr, scope, instance);
       if (targetObj && targetObj.__list) {

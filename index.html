@@ -20,6 +20,7 @@
           <input id="mainClassInput" type="text" value="Main" />
         </label>
         <button id="runBtn" class="btn run-btn">▶ Correr</button>
+        <button id="clearVisualBtn" class="btn">Limpar Visual</button>
         <button id="clearConsoleBtn" class="btn">Limpar Consola</button>
         <button id="exportJarBtn" class="btn accent-btn">Exportar .JAR</button>
         <button id="exportExeBtn" class="btn accent-btn">Gerar Executavel</button>
@@ -42,7 +43,7 @@
       <main class="editor-area">
         <div class="editor-tabs">
           <span id="activeFileLabel" class="active-tab">src/Main.java</span>
-          <span class="hint-text">Suporta package, import entre ficheiros virtuais, classes, metodos, loops e System.out.println</span>
+          <span class="hint-text">Suporta package, import, classes, loops, System.out.println e desenho visual (Tela.*)</span>
         </div>
 
         <div class="code-container">
@@ -58,6 +59,25 @@
           <pre id="consoleOutput" class="console-out"></pre>
         </section>
       </main>
+
+      <aside class="visual-panel">
+        <div class="panel-header">
+          <span>PALCO VISUAL (CANVAS)</span>
+          <span class="visual-dim">420 x 320</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="visualCanvas" width="420" height="320"></canvas>
+        </div>
+        <div class="visual-help">
+          <strong>API Visual disponivel no codigo:</strong>
+          <div><code>Tela.limpar("#070b08");</code></div>
+          <div><code>Tela.cor("#39ff14");</code></div>
+          <div><code>Tela.rect(x, y, w, h);</code></div>
+          <div><code>Tela.circulo(x, y, r);</code></div>
+          <div><code>Tela.linha(x1, y1, x2, y2);</code></div>
+          <div><code>Tela.texto("txt", x, y);</code></div>
+        </div>
+      </aside>
     </div>
   </div>
 

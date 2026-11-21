@@ -7,18 +7,18 @@ import java.util.ArrayList;
 
 public class Main {
     public static void main(String[] args) {
-        ArrayList<String> log = new ArrayList<>();
-        Criatura c1 = new Criatura("Nexalisk", 2);
-        Criatura c2 = new Criatura("Verdzinn", 4);
+        Tela.limpar("#070b08");
+        Tela.cor("#39ff14");
+        Tela.texto("Online Java - Palco Visual", 16, 24);
 
-        c1.andar(3);
-        c2.andar(5);
+        ArrayList<Criatura> grupo = new ArrayList<>();
+        grupo.add(new Criatura("Nexalisk", 80, 90, "#39ff14"));
+        grupo.add(new Criatura("Verdzinn", 220, 160, "#70e000"));
 
-        log.add(c1.info());
-        log.add(c2.info());
-
-        for (int i = 0; i < log.size(); i++) {
-            System.out.println(log.get(i));
+        for (int i = 0; i < grupo.size(); i++) {
+            Criatura c = grupo.get(i);
+            c.desenhar();
+            System.out.println(c.info());
         }
     }
 }
@@ -27,19 +27,26 @@ public class Main {
 
 public class Criatura {
     String nome;
-    int energia;
+    int x;
+    int y;
+    String cor;
 
-    public Criatura(String nome, int energia) {
+    public Criatura(String nome, int x, int y, String cor) {
         this.nome = nome;
-        this.energia = energia;
+        this.x = x;
+        this.y = y;
+        this.cor = cor;
     }
 
-    public void andar(int passos) {
-        this.energia = this.energia + passos;
+    public void desenhar() {
+        Tela.cor(this.cor);
+        Tela.circulo(this.x, this.y, 24);
+        Tela.cor("#e6f5ea");
+        Tela.texto(this.nome, this.x - 24, this.y + 38);
     }
 
     public String info() {
-        return nome + " -> energia=" + energia;
+        return this.nome + " em (" + this.x + ", " + this.y + ")";
     }
 }
 `

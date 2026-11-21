@@ -7,13 +7,22 @@ const activeFileLabelEl = document.getElementById("activeFileLabel");
 const consoleOutputEl = document.getElementById("consoleOutput");
 const statusLabelEl = document.getElementById("statusLabel");
 const mainClassInputEl = document.getElementById("mainClassInput");
+const visualCanvasEl = document.getElementById("visualCanvas");
+const visualCtx = visualCanvasEl ? visualCanvasEl.getContext("2d") : null;
 
 const runBtn = document.getElementById("runBtn");
+const clearVisualBtn = document.getElementById("clearVisualBtn");
 const clearConsoleBtn = document.getElementById("clearConsoleBtn");
 const newFileBtn = document.getElementById("newFileBtn");
 const exportJarBtn = document.getElementById("exportJarBtn");
 const exportExeBtn = document.getElementById("exportExeBtn");
 const resetVfsBtn = document.getElementById("resetVfsBtn");
+
+function clearVisualStage() {
+  if (!visualCtx || !visualCanvasEl) return;
+  visualCtx.fillStyle = "#070b08";
+  visualCtx.fillRect(0, 0, visualCanvasEl.width, visualCanvasEl.height);
+}
 
 function appendConsole(text) {
   consoleOutputEl.textContent += text + "\n";
@@ -119,7 +128,7 @@ runBtn.addEventListener("click", () => {
     if (typeof window.VirtualJavaRunner !== "function") {
       throw new Error("VirtualJavaRunner nao carregado. Verifica se js/java-runner.js existe e nao tem erros.");
     }
-    const runner = new window.VirtualJavaRunner(vfs.files);
+    const runner = new window.VirtualJavaRunner(vfs.files, visualCtx);
     const lines = runner.run(mainClass);
     appendConsole("--- Execucao (" + mainClass + ".main) ---");
     for (const l of lines) appendConsole(l);
@@ -130,6 +139,11 @@ runBtn.addEventListener("click", () => {
     statusLabelEl.className = "status-err";
     statusLabelEl.textContent = "Erro de execucao";
   }
+});
+
+clearVisualBtn.addEventListener("click", () => {
+  clearVisualStage();
+  appendConsole("[VISUAL] Palco limpo.");
 });
 
 clearConsoleBtn.addEventListener("click", () => {
@@ -156,10 +170,12 @@ resetVfsBtn.addEventListener("click", () => {
   vfs.reset();
   renderFileTree();
   loadActiveFileIntoEditor();
+  clearVisualStage();
   consoleOutputEl.textContent = "";
   appendConsole("[VFS] Projeto virtual restaurado para o modelo inicial do Online Java.");
 });
 
+clearVisualStage();
 renderFileTree();
 loadActiveFileIntoEditor();
 appendConsole("Online Java iniciado. Nao e necessario instalar nada para correr ou dar import entre ficheiros virtuais.");
